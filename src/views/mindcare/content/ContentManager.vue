@@ -173,6 +173,10 @@ async function submit() {
   await proxy.$refs.formRef.validate()
   let payload
   try { payload = JSON.parse(form.payloadJson) } catch (_) { proxy.$modal.msgError('内容配置不是合法 JSON'); return }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    proxy.$modal.msgError('内容配置必须是 JSON 对象')
+    return
+  }
   payload.id = form.contentKey
   payload.title = form.title
   payload.category = form.category
