@@ -1,7 +1,7 @@
 <template>
   <div class="app-container client-page">
     <div class="page-heading">
-      <div><h2>用户账户与终端</h2><p>注册账号与已同步设备分别展示。手机号尚未通过短信验证，请仅作为登录标识使用。</p></div>
+      <div><h2>用户账户与终端</h2><p>查看注册账号及其已同步终端。</p></div>
       <el-button icon="Refresh" :loading="loading" @click="load">刷新</el-button>
     </div>
     <el-tabs v-model="activeTab" @tab-change="load">
