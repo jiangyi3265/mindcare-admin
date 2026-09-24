@@ -4,7 +4,7 @@ MindCare 心理健康服务项目的 Web 管理后台，用于承载系统配置
 
 ## 项目简介
 
-`mindcare-admin` 是从 RuoYi Vue 3 前端独立出的管理端工程，已与旧版 Vue 2 前端解耦。当前已接入 `mindcare-backend` 的动态菜单和权限体系，并提供 MindCare 专属运营页面：数据概览、量表管理、课程管理、活动管理、咨询预约处理、全部业务记录，以及注册账号和同步终端查询。
+`mindcare-admin` 是从 RuoYi Vue 3 前端独立出的管理端工程，已与旧版 Vue 2 前端解耦。当前已接入 `mindcare-backend` 的动态菜单和权限体系，并提供 MindCare 专属运营页面：数据概览、首页轮播图、量表管理、课程管理、活动管理、咨询预约处理、全部业务记录，以及注册账号和同步终端查询。
 
 运营人员在后台发布或下架内容后，`mindcare-app` 会在下次同步时获取最新数据；用户端提交的测评、预约、课程进度、活动报名和留言也会汇总到本后台。
 
@@ -37,7 +37,7 @@ npm ci
 npm run dev
 ```
 
-默认示例将 API 前缀配置为 `/dev-api`；开发代理目标由 `vite.config.js` 转发到本地 `8080` 后端，也可用 `MINDCARE_DEV_API_TARGET` 覆盖。新数据库请先执行后端的两个初始化 SQL；已有数据库请备份并执行一次账号迁移 SQL。启动 `mindcare-backend` 后，再使用初始化的管理员账号登录。MindCare 菜单由 `sql/mindcare.sql` 创建。
+默认示例将 API 前缀配置为 `/dev-api`；开发代理目标由 `vite.config.js` 转发到本地 `8080` 后端，也可用 `MINDCARE_DEV_API_TARGET` 覆盖。新数据库请先执行后端的两个初始化 SQL；已有数据库请备份并按需执行账号及轮播图迁移 SQL。启动 `mindcare-backend` 后，再使用初始化的管理员账号登录。MindCare 菜单由后端 SQL 创建。
 
 生产构建：
 
@@ -63,6 +63,8 @@ public/           静态公开资源
 ```
 
 MindCare 页面位于 `src/views/mindcare/`，接口封装位于 `src/api/mindcare/`。内容配置保留完整 JSON 编辑能力，同时自动同步 ID、标题、分类和简介等公共字段。
+
+首页轮播图在 MindCare 运营 → 首页轮播图：可选择内置图片或上传 JPG/PNG 横图（最多 5 MB），设置排序值与发布状态。已发布图片按排序值升序出现在用户端测评首页，用户端下次同步后更新。
 
 ## 简历描述示例
 
