@@ -39,3 +39,7 @@ export function updateRecordStatus(id, status) {
 export function listClients(query) {
   return request({ url: '/mindcare/client/list', method: 'get', params: query })
 }
+
+export function listAccounts(query) {
+  return request({ url: '/mindcare/account/list', method: 'get', params: query })
+}
