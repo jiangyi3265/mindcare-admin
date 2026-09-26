@@ -75,15 +75,15 @@
             <el-form-item label="简介" prop="summary"><el-input v-model="form.summary" type="textarea" :rows="2" maxlength="500" show-word-limit /></el-form-item>
           </el-col>
           <template v-if="contentType === 'assessment'">
-            <el-col :span="12"><el-form-item label="量表来源"><el-input v-model="form.sourceName" placeholder="如 WHO-5 / IPIP" /></el-form-item></el-col>
-            <el-col :span="12"><el-form-item label="来源链接"><el-input v-model="form.sourceUrl" placeholder="https://..." /></el-form-item></el-col>
+            <el-col :span="12"><el-form-item label="量表来源" prop="sourceName"><el-input v-model="form.sourceName" placeholder="如 WHO-5 / IPIP" /></el-form-item></el-col>
+            <el-col :span="12"><el-form-item label="来源链接" prop="sourceUrl"><el-input v-model="form.sourceUrl" placeholder="https://..." /></el-form-item></el-col>
             <el-col :span="12"><el-form-item label="授权说明"><el-input v-model="form.license" placeholder="如 CC BY-NC-SA 3.0 IGO" /></el-form-item></el-col>
             <el-col :span="12"><el-form-item label="版本"><el-input v-model="form.version" /></el-form-item></el-col>
             <el-col :span="8"><el-form-item label="预计时长"><el-input-number v-model="form.minutes" :min="1" :max="180" /></el-form-item></el-col>
             <el-col :span="8"><el-form-item label="计分方式"><el-select v-model="form.scoringType"><el-option label="百分制" value="percent" /><el-option label="原始总分" value="sum" /></el-select></el-form-item></el-col>
             <el-col :span="8"><el-form-item label="最高分"><el-input-number v-model="form.scoreMax" :min="1" :max="1000" /></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="选项"><div class="repeat-list"><div v-for="(item, index) in form.options" :key="index" class="repeat-row"><el-input v-model="form.options[index]" placeholder="选项文本" /><el-input-number v-model="form.optionValues[index]" :min="0" /><el-button link type="danger" @click="removeOption(index)" :disabled="form.options.length <= 2">删除</el-button></div><el-button link type="primary" @click="addOption">+ 添加选项</el-button></div></el-form-item></el-col>
-            <el-col :span="24"><el-form-item label="预警规则"><div class="risk-row"><el-select v-model="form.crisisDirection" style="width: 140px"><el-option label="不启用" value="none" /><el-option label="低于阈值" value="low" /><el-option label="高于阈值" value="high" /></el-select><el-input-number v-model="form.crisisThreshold" :disabled="form.crisisDirection === 'none'" :min="0" /><el-input v-model="form.crisisReason" :disabled="form.crisisDirection === 'none'" placeholder="触发后给用户的提示" /></div></el-form-item></el-col>
+            <el-col :span="24"><el-form-item label="预警规则"><div class="risk-row"><el-select v-model="form.crisisDirection" style="width: 140px"><el-option label="不启用" value="none" /><el-option label="低于阈值" value="low" /><el-option label="高于阈值" value="high" /></el-select><el-input-number v-model="form.crisisThreshold" :disabled="form.crisisDirection === 'none'" :min="0" placeholder="总分阈值" /><el-input-number v-model="form.crisisAnswerIndex" :disabled="form.crisisDirection === 'none'" :min="-1" placeholder="题号（可选）" /><el-input-number v-model="form.crisisAnswerMin" :disabled="form.crisisAnswerIndex < 0" :min="0" placeholder="选项值≥" /><el-input v-model="form.crisisReason" :disabled="form.crisisDirection === 'none'" placeholder="触发后给用户的提示" /></div></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="题目"><div class="repeat-list"><div v-for="(item, index) in form.questions" :key="index" class="repeat-row question-row"><span class="question-index">{{ index + 1 }}</span><el-input v-model="form.questions[index]" placeholder="填写题目" /><el-button link type="danger" @click="removeQuestion(index)" :disabled="form.questions.length <= 1">删除</el-button></div><el-button link type="primary" @click="addQuestion">+ 添加题目</el-button></div></el-form-item></el-col>
           </template>
           <template v-else-if="contentType === 'course'">
@@ -139,7 +139,9 @@ const rules = {
     { required: true, message: '请输入内容标识', trigger: 'blur' },
     { pattern: /^[a-z0-9][a-z0-9-]*$/, message: '仅支持小写字母、数字和连字符', trigger: 'blur' }
   ],
-  payloadJson: [{ required: true, message: '请输入内容配置', trigger: 'blur' }]
+  payloadJson: [{ required: true, message: '请输入内容配置', trigger: 'blur' }],
+  sourceName: [{ validator: (_rule, value, callback) => props.contentType === 'assessment' && !String(value || '').trim() ? callback(new Error('请填写量表权威来源')) : callback(), trigger: 'blur' }],
+  sourceUrl: [{ validator: (_rule, value, callback) => props.contentType === 'assessment' && !/^https:\/\/\S+$/.test(String(value || '').trim()) ? callback(new Error('请填写 HTTPS 来源链接')) : callback(), trigger: 'blur' }]
 }
 
 function emptyPayload() {
@@ -151,7 +153,7 @@ function emptyPayload() {
 }
 
 function emptyForm() {
-  return { contentId: undefined, contentKey: '', contentType: props.contentType, title: '', category: '', summary: '', payloadJson: JSON.stringify(emptyPayload(), null, 2), status: '0', sortOrder: 0, minutes: 10, learners: '0', teacher: '', intro: '', video: '', chapters: [{ title: '第一章', duration: '05:00' }], questions: ['请填写题目'], options: ['从不', '偶尔', '经常', '几乎每天'], optionValues: [0, 1, 2, 3], sourceName: '', sourceUrl: '', license: '', version: '', scoringType: 'percent', scoreMax: 100, crisisDirection: 'none', crisisThreshold: 0, crisisReason: '', name: '', credentials: '', profile: '', methodsText: '', photo: 'builtin:avatar' }
+  return { contentId: undefined, contentKey: '', contentType: props.contentType, title: '', category: '', summary: '', payloadJson: JSON.stringify(emptyPayload(), null, 2), status: '0', sortOrder: 0, minutes: 10, learners: '0', teacher: '', intro: '', video: '', chapters: [{ title: '第一章', duration: '05:00' }], questions: ['请填写题目'], options: ['从不', '偶尔', '经常', '几乎每天'], optionValues: [0, 1, 2, 3], sourceName: '', sourceUrl: '', license: '', version: '', scoringType: 'percent', scoreMax: 100, crisisDirection: 'none', crisisThreshold: 0, crisisAnswerIndex: -1, crisisAnswerMin: 1, crisisReason: '', name: '', credentials: '', profile: '', methodsText: '', photo: 'builtin:avatar' }
 }
 
 function assignForm(value) {
@@ -165,7 +167,7 @@ function assignForm(value) {
     form.optionValues = Array.isArray(payload.optionValues) && payload.optionValues.length ? payload.optionValues : form.options.map((_, index) => index)
     form.sourceName = payload.sourceName || ''; form.sourceUrl = payload.sourceUrl || ''; form.license = payload.license || ''; form.version = payload.version || ''
     form.scoringType = payload.scoring?.type || 'percent'; form.scoreMax = Number(payload.scoring?.maxScore || (form.scoringType === 'sum' ? form.questions.length * Math.max(...form.optionValues) : 100))
-    form.crisisDirection = payload.crisisRules?.direction || 'none'; form.crisisThreshold = Number(payload.crisisRules?.threshold || 0); form.crisisReason = payload.crisisRules?.reason || ''
+    form.crisisDirection = payload.crisisRules?.direction || 'none'; form.crisisThreshold = Number(payload.crisisRules?.threshold || 0); form.crisisAnswerIndex = Number.isInteger(Number(payload.crisisRules?.answerIndex)) ? Number(payload.crisisRules.answerIndex) : -1; form.crisisAnswerMin = Number(payload.crisisRules?.answerMin || 1); form.crisisReason = payload.crisisRules?.reason || ''
   } else if (props.contentType === 'course') {
     form.minutes = Number(payload.minutes || 10); form.learners = payload.learners || '0'; form.teacher = payload.teacher || ''; form.intro = payload.intro || value.summary || ''; form.video = payload.video || ''; form.chapters = Array.isArray(payload.chapters) && payload.chapters.length ? payload.chapters : [{ title: '第一章', duration: '05:00' }]
   } else if (props.contentType === 'expert') {
@@ -212,7 +214,11 @@ function expertUploadError() { proxy.$modal.msgError('头像上传失败，请�
 function imageUrl(path) { return `${import.meta.env.VITE_APP_BASE_API}${path}` }
 
 function buildPayload() {
-  if (props.contentType === 'assessment') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, description: form.summary, count: form.questions.length, minutes: form.minutes, questions: form.questions, options: form.options, optionValues: form.optionValues, sourceName: form.sourceName, sourceUrl: form.sourceUrl, license: form.license, version: form.version, scoring: { type: form.scoringType, maxScore: form.scoreMax, displayMax: form.scoreMax, label: form.scoringType === 'sum' ? '原始总分' : '状态指数' }, crisisRules: { direction: form.crisisDirection, threshold: form.crisisThreshold, level: form.crisisDirection === 'none' ? 'normal' : 'high', reason: form.crisisReason } }
+  if (props.contentType === 'assessment') {
+    const crisisRules = { direction: form.crisisDirection, threshold: form.crisisThreshold, level: form.crisisDirection === 'none' ? 'normal' : 'high', reason: form.crisisReason }
+    if (form.crisisDirection !== 'none' && Number(form.crisisAnswerIndex) >= 0) { crisisRules.answerIndex = Number(form.crisisAnswerIndex); crisisRules.answerMin = Number(form.crisisAnswerMin) }
+    return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, description: form.summary, count: form.questions.length, minutes: form.minutes, questions: form.questions, options: form.options, optionValues: form.optionValues, sourceName: form.sourceName, sourceUrl: form.sourceUrl, license: form.license, version: form.version, scoring: { type: form.scoringType, maxScore: form.scoreMax, displayMax: form.scoreMax, label: form.scoringType === 'sum' ? '原始总分' : '状态指数' }, crisisRules }
+  }
   if (props.contentType === 'course') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, minutes: form.minutes, learners: form.learners, teacher: form.teacher, intro: form.intro || form.summary, video: form.video, chapters: form.chapters }
   if (props.contentType === 'expert') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, name: form.name || form.title, credentials: form.credentials, profile: form.profile || form.summary, methods: form.methodsText.split(/[,，]/).map((item) => item.trim()).filter(Boolean), photo: form.photo, available: true }
   try { return JSON.parse(form.payloadJson) } catch (_) { return null }

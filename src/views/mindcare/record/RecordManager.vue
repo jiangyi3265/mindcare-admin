@@ -80,7 +80,7 @@ const statusOptions = [
 const actionStatuses = statusOptions.filter(item => ['pending', 'confirmed', 'canceled', 'completed'].includes(item.value))
 function typeMeta(value) { return typeOptions.find(item => item.value === value) || { label: value || '其他', tag: 'info' } }
 function statusMeta(value) { return statusOptions.find(item => item.value === value) || { label: value || '未知', tag: 'info' } }
-function editable(row) { return ['consultation', 'activity', 'message'].includes(row.recordType) }
+function editable(row) { return ['consultation', 'activity', 'message'].includes(row.recordType) || (row.recordType === 'assessment' && row.riskLevel && row.riskLevel !== 'normal') }
 function prettyData(value) { if (!value) return '无'; try { return JSON.stringify(JSON.parse(value), null, 2) } catch (_) { return value } }
 async function load() { loading.value = true; try { const response = await listRecords(query); rows.value = response.rows || []; total.value = response.total || 0 } finally { loading.value = false } }
 function search() { query.pageNum = 1; load() }

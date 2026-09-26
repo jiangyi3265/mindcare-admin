@@ -46,7 +46,8 @@ const recentRecords = ref([])
 const metrics = [
   { key: 'clientCount', label: '用户终端', hint: '已建立同步身份' },
   { key: 'assessmentRecordCount', label: '完成测评', hint: '用户端测评记录' },
-  { key: 'crisisRecordCount', label: '测评预警', hint: '需要人工关注' },
+  { key: 'crisisRecordCount', label: '测评预警', hint: '累计风险信号' },
+  { key: 'pendingRiskCount', label: '待处理预警', hint: '需要人工跟进' },
   { key: 'pendingConsultationCount', label: '待处理预约', hint: '需要尽快跟进' },
   { key: 'activityEnrollmentCount', label: '活动报名', hint: '累计报名记录' },
   { key: 'assessmentCount', label: '已发布量表', hint: '用户端当前可见' },
