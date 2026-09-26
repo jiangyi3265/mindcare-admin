@@ -29,6 +29,7 @@
       <el-table-column label="结果" width="110" align="center">
         <template #default="scope"><span v-if="scope.row.score !== null && scope.row.score !== undefined">{{ scope.row.score }} 分</span><span v-else-if="scope.row.progress !== null && scope.row.progress !== undefined">{{ scope.row.progress }}%</span><span v-else>—</span></template>
       </el-table-column>
+      <el-table-column label="风险信号" width="110" align="center"><template #default="scope"><el-tag v-if="scope.row.riskLevel && scope.row.riskLevel !== 'normal'" type="danger">{{ scope.row.riskLevel === 'high' ? '高风险' : '需关注' }}</el-tag><span v-else class="muted">正常</span></template></el-table-column>
       <el-table-column label="状态" prop="status" width="120"><template #default="scope"><el-tag :type="statusMeta(scope.row.status).tag" effect="plain">{{ statusMeta(scope.row.status).label }}</el-tag></template></el-table-column>
       <el-table-column label="更新时间" prop="updateTime" width="170" />
       <el-table-column label="操作" width="130" fixed="right">
@@ -46,6 +47,7 @@
         <el-descriptions-item label="联系人">{{ detail.contactName || '—' }}</el-descriptions-item>
         <el-descriptions-item label="联系电话">{{ detail.contactPhone || '—' }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ statusMeta(detail.status).label }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.riskLevel && detail.riskLevel !== 'normal'" label="预警说明"><span class="risk-text">{{ detail.riskReason || '测评结果提示需要关注' }}</span></el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ detail.createTime || '—' }}</el-descriptions-item>
       </el-descriptions>
       <div v-if="detail" class="payload-block"><h4>业务明细</h4><pre>{{ prettyData(detail.dataJson) }}</pre></div>

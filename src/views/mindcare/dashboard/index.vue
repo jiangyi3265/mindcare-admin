@@ -30,7 +30,7 @@
           <template #default="scope">{{ scope.row.title || '未命名记录' }}</template>
         </el-table-column>
         <el-table-column label="用户终端" prop="clientId" min-width="190" show-overflow-tooltip />
-        <el-table-column label="状态" prop="status" width="120"><template #default="scope">{{ statusText(scope.row.status) }}</template></el-table-column>
+        <el-table-column label="状态" prop="status" width="120"><template #default="scope"><el-tag v-if="scope.row.riskLevel && scope.row.riskLevel !== 'normal'" type="danger" effect="dark">预警</el-tag><span v-else>{{ statusText(scope.row.status) }}</span></template></el-table-column>
         <el-table-column label="更新时间" prop="updateTime" width="170" />
       </el-table>
     </section>
@@ -46,6 +46,7 @@ const recentRecords = ref([])
 const metrics = [
   { key: 'clientCount', label: '用户终端', hint: '已建立同步身份' },
   { key: 'assessmentRecordCount', label: '完成测评', hint: '用户端测评记录' },
+  { key: 'crisisRecordCount', label: '测评预警', hint: '需要人工关注' },
   { key: 'pendingConsultationCount', label: '待处理预约', hint: '需要尽快跟进' },
   { key: 'activityEnrollmentCount', label: '活动报名', hint: '累计报名记录' },
   { key: 'assessmentCount', label: '已发布量表', hint: '用户端当前可见' },
