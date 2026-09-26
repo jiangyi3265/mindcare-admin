@@ -99,7 +99,7 @@
             <el-col :span="12"><el-form-item label="资质说明"><el-input v-model="form.credentials" /></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="专家简介"><el-input v-model="form.profile" type="textarea" :rows="3" /></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="擅长方向"><el-input v-model="form.methodsText" placeholder="用逗号分隔，例如 情绪管理,压力调节" /></el-form-item></el-col>
-            <el-col :span="24"><el-form-item label="头像地址"><el-input v-model="form.photo" placeholder="builtin:avatar 或 /profile/upload/xxx.jpg" /></el-form-item></el-col>
+            <el-col :span="24"><el-form-item label="头像"><div class="expert-image-editor"><el-input v-model="form.photo" placeholder="builtin:avatar 或上传后自动填入" /><el-upload :action="uploadUrl" :headers="uploadHeaders" :show-file-list="false" :before-upload="beforeExpertUpload" :on-success="expertUploadSuccess" :on-error="expertUploadError" accept="image/jpeg,image/png"><el-button icon="Upload">上传头像</el-button></el-upload><el-image v-if="form.photo && form.photo.startsWith('/profile/')" class="expert-image-preview" :src="imageUrl(form.photo)" fit="cover" /></div></el-form-item></el-col>
           </template>
           <el-col v-if="contentType === 'activity'" :span="24"><el-form-item label="内容配置" prop="payloadJson"><el-input v-model="form.payloadJson" type="textarea" :rows="12" spellcheck="false" class="json-editor" /></el-form-item></el-col>
         </el-row>
@@ -114,6 +114,7 @@
 
 <script setup>
 import { addContent, deleteContent, getContent, listContent, updateContent } from '@/api/mindcare'
+import { getToken } from '@/utils/auth'
 
 const props = defineProps({
   contentType: { type: String, required: true },
@@ -129,6 +130,8 @@ const dialogOpen = ref(false)
 const rows = ref([])
 const total = ref(0)
 const query = reactive({ pageNum: 1, pageSize: 10, contentType: props.contentType, title: undefined, status: undefined })
+const uploadUrl = `${import.meta.env.VITE_APP_BASE_API}/common/upload`
+const uploadHeaders = computed(() => ({ Authorization: `Bearer ${getToken()}` }))
 const form = reactive(emptyForm())
 const rules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
@@ -197,6 +200,16 @@ function addOption() { form.options.push(''); form.optionValues.push(form.option
 function removeOption(index) { form.options.splice(index, 1); form.optionValues.splice(index, 1) }
 function addChapter() { form.chapters.push({ title: '', duration: '05:00' }) }
 function removeChapter(index) { form.chapters.splice(index, 1) }
+function beforeExpertUpload(file) {
+  if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 5 * 1024 * 1024) { proxy.$modal.msgError('请上传不超过 5 MB 的 JPG 或 PNG 图片'); return false }
+  return true
+}
+function expertUploadSuccess(response) {
+  if (response.code !== 200 || !/^\/profile\/upload\/[A-Za-z0-9/_-]+\.(png|jpe?g)$/.test(response.fileName || '')) { proxy.$modal.msgError(response.msg || '头像上传失败'); return }
+  form.photo = response.fileName; proxy.$modal.msgSuccess('头像已上传，请保存专家资料')
+}
+function expertUploadError() { proxy.$modal.msgError('头像上传失败，请重试') }
+function imageUrl(path) { return `${import.meta.env.VITE_APP_BASE_API}${path}` }
 
 function buildPayload() {
   if (props.contentType === 'assessment') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, description: form.summary, count: form.questions.length, minutes: form.minutes, questions: form.questions, options: form.options, optionValues: form.optionValues, sourceName: form.sourceName, sourceUrl: form.sourceUrl, license: form.license, version: form.version, scoring: { type: form.scoringType, maxScore: form.scoreMax, displayMax: form.scoreMax, label: form.scoringType === 'sum' ? '原始总分' : '状态指数' }, crisisRules: { direction: form.crisisDirection, threshold: form.crisisThreshold, level: form.crisisDirection === 'none' ? 'normal' : 'high', reason: form.crisisReason } }
@@ -255,4 +268,7 @@ load()
 .question-row .question-index { width: 24px; color: #7b8882; text-align: right; }
 .risk-row { display: flex; gap: 9px; width: 100%; }
 .risk-row .el-input { flex: 1; }
+.expert-image-editor { width: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.expert-image-editor > .el-input { flex: 1; min-width: 260px; }
+.expert-image-preview { width: 72px; height: 72px; border-radius: 50%; }
 </style>
