@@ -95,10 +95,11 @@
             <el-col :span="24"><el-form-item label="章节"><div class="repeat-list"><div v-for="(item, index) in form.chapters" :key="index" class="repeat-row"><el-input v-model="item.title" placeholder="章节标题" /><el-input v-model="item.duration" placeholder="05:00" /><el-button link type="danger" @click="removeChapter(index)" :disabled="form.chapters.length <= 1">删除</el-button></div><el-button link type="primary" @click="addChapter">+ 添加章节</el-button></div></el-form-item></el-col>
           </template>
           <template v-else-if="contentType === 'expert'">
-            <el-col :span="12"><el-form-item label="专家姓名"><el-input v-model="form.name" /></el-form-item></el-col>
-            <el-col :span="12"><el-form-item label="资质说明"><el-input v-model="form.credentials" /></el-form-item></el-col>
-            <el-col :span="24"><el-form-item label="专家简介"><el-input v-model="form.profile" type="textarea" :rows="3" /></el-form-item></el-col>
+            <el-col :span="12"><el-form-item label="专家姓名" prop="name"><el-input v-model="form.name" placeholder="例如：李老师" /></el-form-item></el-col>
+            <el-col :span="12"><el-form-item label="资质说明" prop="credentials"><el-input v-model="form.credentials" placeholder="例如：国家二级心理咨询师" /></el-form-item></el-col>
+            <el-col :span="24"><el-form-item label="专家简介" prop="profile"><el-input v-model="form.profile" type="textarea" :rows="3" placeholder="介绍咨询方向、工作方式和服务人群" /></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="擅长方向"><el-input v-model="form.methodsText" placeholder="用逗号分隔，例如 情绪管理,压力调节" /></el-form-item></el-col>
+            <el-col :span="24"><el-form-item label="可预约时段" prop="availableTimesText"><el-input v-model="form.availableTimesText" placeholder="用逗号分隔，例如 10:00,14:00,16:00" /><div class="field-help">用户端会按这些时段展示未来两个月的预约入口。</div></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="头像"><div class="expert-image-editor"><el-input v-model="form.photo" placeholder="builtin:avatar 或上传后自动填入" /><el-upload :action="uploadUrl" :headers="uploadHeaders" :show-file-list="false" :before-upload="beforeExpertUpload" :on-success="expertUploadSuccess" :on-error="expertUploadError" accept="image/jpeg,image/png"><el-button icon="Upload">上传头像</el-button></el-upload><el-image v-if="form.photo && form.photo.startsWith('/profile/')" class="expert-image-preview" :src="imageUrl(form.photo)" fit="cover" /></div></el-form-item></el-col>
           </template>
           <template v-else-if="contentType === 'activity'">
@@ -150,19 +151,23 @@ const rules = {
   ],
   payloadJson: [{ required: true, message: '请输入内容配置', trigger: 'blur' }],
   sourceName: [{ validator: (_rule, value, callback) => props.contentType === 'assessment' && !String(value || '').trim() ? callback(new Error('请填写量表权威来源')) : callback(), trigger: 'blur' }],
-  sourceUrl: [{ validator: (_rule, value, callback) => props.contentType === 'assessment' && !/^https:\/\/\S+$/.test(String(value || '').trim()) ? callback(new Error('请填写 HTTPS 来源链接')) : callback(), trigger: 'blur' }]
+  sourceUrl: [{ validator: (_rule, value, callback) => props.contentType === 'assessment' && !/^https:\/\/\S+$/.test(String(value || '').trim()) ? callback(new Error('请填写 HTTPS 来源链接')) : callback(), trigger: 'blur' }],
+  name: [{ validator: (_rule, value, callback) => props.contentType === 'expert' && !String(value || '').trim() ? callback(new Error('请输入专家姓名')) : callback(), trigger: 'blur' }],
+  credentials: [{ validator: (_rule, value, callback) => props.contentType === 'expert' && !String(value || '').trim() ? callback(new Error('请输入专家资质说明')) : callback(), trigger: 'blur' }],
+  profile: [{ validator: (_rule, value, callback) => props.contentType === 'expert' && !String(value || '').trim() ? callback(new Error('请输入专家简介')) : callback(), trigger: 'blur' }],
+  availableTimesText: [{ validator: (_rule, value, callback) => props.contentType === 'expert' && !String(value || '').trim() ? callback(new Error('请至少填写一个可预约时段')) : callback(), trigger: 'blur' }]
 }
 
 function emptyPayload() {
   const common = { id: '', title: '', category: '' }
   if (props.contentType === 'assessment') return { ...common, count: 1, minutes: 3, art: 'flowers', hero: 'rest', description: '', questions: ['请填写题目'], options: ['从不', '偶尔', '经常', '几乎每天'], optionValues: [0, 1, 2, 3], scoring: { type: 'percent', maxScore: 100 }, crisisRules: { direction: 'none' } }
   if (props.contentType === 'course') return { ...common, minutes: 10, learners: '0', art: 'meadow', hero: 'video', teacher: '', intro: '', video: '', chapters: [{ title: '第一章', duration: '05:00' }] }
-  if (props.contentType === 'expert') return { ...common, name: '', credentials: '', profile: '', methods: [], photo: 'builtin:avatar' }
+  if (props.contentType === 'expert') return { ...common, name: '', credentials: '', profile: '', methods: [], photo: 'builtin:avatar', availableTimes: ['10:00', '14:00', '16:00'] }
   return { ...common, date: '', time: '', location: '', capacity: 20, enrolled: 0, status: '报名中', art: 'walking', hero: 'forest', intro: '', schedule: [['09:00', '活动开始', '']] }
 }
 
 function emptyForm() {
-  return { contentId: undefined, contentKey: '', contentType: props.contentType, title: '', category: '', summary: '', payloadJson: JSON.stringify(emptyPayload(), null, 2), status: '0', sortOrder: 0, minutes: 10, learners: '0', teacher: '', intro: '', video: '', chapters: [{ title: '第一章', duration: '05:00' }], questions: ['请填写题目'], options: ['从不', '偶尔', '经常', '几乎每天'], optionValues: [0, 1, 2, 3], sourceName: '', sourceUrl: '', license: '', version: '', scoringType: 'percent', scoreMax: 100, crisisDirection: 'none', crisisThreshold: 0, crisisAnswerIndex: -1, crisisAnswerMin: 1, crisisReason: '', name: '', credentials: '', profile: '', methodsText: '', photo: 'builtin:avatar', activityDate: '', activityTime: '', activityLocation: '', activityCapacity: 20, activityEnrolled: 0, activityStatus: '报名中', activityIntro: '', activitySchedule: [['09:00', '活动开始', '']] }
+  return { contentId: undefined, contentKey: '', contentType: props.contentType, title: '', category: '', summary: '', payloadJson: JSON.stringify(emptyPayload(), null, 2), status: '0', sortOrder: 0, minutes: 10, learners: '0', teacher: '', intro: '', video: '', chapters: [{ title: '第一章', duration: '05:00' }], questions: ['请填写题目'], options: ['从不', '偶尔', '经常', '几乎每天'], optionValues: [0, 1, 2, 3], sourceName: '', sourceUrl: '', license: '', version: '', scoringType: 'percent', scoreMax: 100, crisisDirection: 'none', crisisThreshold: 0, crisisAnswerIndex: -1, crisisAnswerMin: 1, crisisReason: '', name: '', credentials: '', profile: '', methodsText: '', availableTimesText: '10:00,14:00,16:00', photo: 'builtin:avatar', activityDate: '', activityTime: '', activityLocation: '', activityCapacity: 20, activityEnrolled: 0, activityStatus: '报名中', activityIntro: '', activitySchedule: [['09:00', '活动开始', '']] }
 }
 
 function assignForm(value) {
@@ -180,7 +185,7 @@ function assignForm(value) {
   } else if (props.contentType === 'course') {
     form.minutes = Number(payload.minutes || 10); form.learners = payload.learners || '0'; form.teacher = payload.teacher || ''; form.intro = payload.intro || value.summary || ''; form.video = payload.video || ''; form.chapters = Array.isArray(payload.chapters) && payload.chapters.length ? payload.chapters : [{ title: '第一章', duration: '05:00' }]
   } else if (props.contentType === 'expert') {
-    form.name = payload.name || value.title || ''; form.credentials = payload.credentials || ''; form.profile = payload.profile || value.summary || ''; form.methodsText = Array.isArray(payload.methods) ? payload.methods.join(',') : ''; form.photo = payload.photo || 'builtin:avatar'
+    form.name = payload.name || value.title || ''; form.credentials = payload.credentials || ''; form.profile = payload.profile || value.summary || ''; form.methodsText = Array.isArray(payload.methods) ? payload.methods.join(',') : ''; form.availableTimesText = Array.isArray(payload.availableTimes) && payload.availableTimes.length ? payload.availableTimes.join(',') : '10:00,14:00,16:00'; form.photo = payload.photo || 'builtin:avatar'
   } else if (props.contentType === 'activity') {
     form.activityDate = payload.date || ''; form.activityTime = payload.time || ''; form.activityLocation = payload.location || ''; form.activityCapacity = Number(payload.capacity || 20); form.activityEnrolled = Number(payload.enrolled || 0); form.activityStatus = payload.status || '报名中'; form.activityIntro = payload.intro || value.summary || ''; form.activitySchedule = Array.isArray(payload.schedule) && payload.schedule.length ? payload.schedule.map((item) => Array.isArray(item) ? [item[0] || '', item[1] || '', item[2] || ''] : ['', '', '']) : [['09:00', '活动开始', '']]
   }
@@ -199,7 +204,8 @@ async function load() {
 
 function search() { query.pageNum = 1; load() }
 function resetQuery() { proxy.resetForm('queryRef'); query.contentType = props.contentType; search() }
-function handleAdd() { assignForm(); dialogOpen.value = true }
+function nextExpertKey() { return `expert-${Date.now().toString(36)}` }
+function handleAdd() { assignForm(); if (props.contentType === 'expert') form.contentKey = nextExpertKey(); dialogOpen.value = true }
 
 async function handleEdit(row) {
   const response = await getContent(row.contentId)
@@ -233,12 +239,16 @@ function buildPayload() {
     return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, description: form.summary, count: form.questions.length, minutes: form.minutes, questions: form.questions, options: form.options, optionValues: form.optionValues, sourceName: form.sourceName, sourceUrl: form.sourceUrl, license: form.license, version: form.version, scoring: { type: form.scoringType, maxScore: form.scoreMax, displayMax: form.scoreMax, label: form.scoringType === 'sum' ? '原始总分' : '状态指数' }, crisisRules }
   }
   if (props.contentType === 'course') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, minutes: form.minutes, learners: form.learners, teacher: form.teacher, intro: form.intro || form.summary, video: form.video, chapters: form.chapters }
-  if (props.contentType === 'expert') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, name: form.name || form.title, credentials: form.credentials, profile: form.profile || form.summary, methods: form.methodsText.split(/[,，]/).map((item) => item.trim()).filter(Boolean), photo: form.photo, available: true }
+  if (props.contentType === 'expert') return { ...emptyPayload(), id: form.contentKey, title: form.title || form.name, category: form.category, name: form.name || form.title, credentials: form.credentials, profile: form.profile || form.summary, methods: form.methodsText.split(/[,，]/).map((item) => item.trim()).filter(Boolean), availableTimes: form.availableTimesText.split(/[,，]/).map((item) => item.trim()).filter(Boolean), photo: form.photo, available: true }
   if (props.contentType === 'activity') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, date: form.activityDate, time: form.activityTime, location: form.activityLocation, capacity: form.activityCapacity, enrolled: form.activityEnrolled, status: form.activityStatus, intro: form.activityIntro || form.summary, schedule: form.activitySchedule }
   try { return JSON.parse(form.payloadJson) } catch (_) { return null }
 }
 
 async function submit() {
+  if (props.contentType === 'expert') {
+    if (!form.contentKey) form.contentKey = nextExpertKey()
+    if (!form.title && form.name) form.title = form.name
+  }
   await proxy.$refs.formRef.validate()
   const payload = buildPayload()
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
@@ -291,4 +301,5 @@ load()
 .expert-image-editor { width: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .expert-image-editor > .el-input { flex: 1; min-width: 260px; }
 .expert-image-preview { width: 72px; height: 72px; border-radius: 50%; }
+.field-help { margin-top: 5px; color: #89958f; font-size: 12px; line-height: 1.5; }
 </style>
