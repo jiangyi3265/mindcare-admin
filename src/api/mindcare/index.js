@@ -32,8 +32,12 @@ export function getRecord(id) {
   return request({ url: `/mindcare/record/${id}`, method: 'get' })
 }
 
-export function updateRecordStatus(id, status) {
-  return request({ url: `/mindcare/record/${id}/status`, method: 'put', data: { status } })
+export function updateRecordStatus(id, data) {
+  return request({
+    url: `/mindcare/record/${id}/status`,
+    method: 'put',
+    data: typeof data === 'string' ? { status: data } : data
+  })
 }
 
 export function listClients(query) {

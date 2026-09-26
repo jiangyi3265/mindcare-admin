@@ -50,17 +50,17 @@
 
     <pagination v-show="total > 0" :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="load" />
 
-    <el-dialog v-model="dialogOpen" :title="form.contentId ? `编辑${typeLabel}` : `新增${typeLabel}`" width="820px" append-to-body destroy-on-close>
-      <el-alert title="保存后，已发布内容会在用户端下次同步时更新。量表和课程使用可视化表单，无需手写 JSON。" type="info" :closable="false" show-icon class="dialog-tip" />
+    <el-dialog v-model="dialogOpen" :title="form.contentId ? `编辑${typeLabel}` : `新增${typeLabel}`" width="min(820px, calc(100vw - 24px))" class="content-edit-dialog" append-to-body destroy-on-close>
+      <el-alert :title="contentType === 'expert' ? '填写专家姓名、简介和资质后即可保存；内容标识已自动生成。保存后用户端会同步展示。' : '保存后，已发布内容会在用户端下次同步时更新。量表和课程使用可视化表单，无需手写 JSON。'" type="info" :closable="false" show-icon class="dialog-tip" />
       <el-form ref="formRef" :model="form" :rules="rules" label-width="92px">
         <el-row :gutter="18">
-          <el-col :span="12">
+          <el-col v-if="contentType !== 'expert'" :xs="24" :sm="12">
             <el-form-item label="标题" prop="title"><el-input v-model="form.title" maxlength="100" show-word-limit /></el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="内容标识" prop="contentKey"><el-input v-model="form.contentKey" placeholder="如 stress-management" :disabled="Boolean(form.contentId)" /></el-form-item>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="内容标识" prop="contentKey"><el-input v-model="form.contentKey" placeholder="如 stress-management" :disabled="Boolean(form.contentId) || contentType === 'expert'" /></el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :xs="24" :sm="12">
             <el-form-item label="分类" prop="category"><el-input v-model="form.category" /></el-form-item>
           </el-col>
           <el-col :span="6">
@@ -95,9 +95,9 @@
             <el-col :span="24"><el-form-item label="章节"><div class="repeat-list"><div v-for="(item, index) in form.chapters" :key="index" class="repeat-row"><el-input v-model="item.title" placeholder="章节标题" /><el-input v-model="item.duration" placeholder="05:00" /><el-button link type="danger" @click="removeChapter(index)" :disabled="form.chapters.length <= 1">删除</el-button></div><el-button link type="primary" @click="addChapter">+ 添加章节</el-button></div></el-form-item></el-col>
           </template>
           <template v-else-if="contentType === 'expert'">
-            <el-col :span="12"><el-form-item label="专家姓名" prop="name"><el-input v-model="form.name" placeholder="例如：李老师" /></el-form-item></el-col>
-            <el-col :span="12"><el-form-item label="资质说明" prop="credentials"><el-input v-model="form.credentials" placeholder="例如：国家二级心理咨询师" /></el-form-item></el-col>
-            <el-col :span="24"><el-form-item label="专家简介" prop="profile"><el-input v-model="form.profile" type="textarea" :rows="3" placeholder="介绍咨询方向、工作方式和服务人群" /></el-form-item></el-col>
+            <el-col :xs="24" :sm="12"><el-form-item label="专家姓名" prop="name"><el-input v-model="form.name" maxlength="50" placeholder="例如：李老师" /></el-form-item></el-col>
+            <el-col :xs="24" :sm="12"><el-form-item label="资质说明" prop="credentials"><el-input v-model="form.credentials" maxlength="150" placeholder="例如：国家二级心理咨询师" /></el-form-item></el-col>
+            <el-col :span="24"><el-form-item label="专家简介" prop="profile"><el-input v-model="form.profile" type="textarea" :rows="3" maxlength="500" show-word-limit placeholder="介绍咨询方向、工作方式和服务人群" /></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="擅长方向"><el-input v-model="form.methodsText" placeholder="用逗号分隔，例如 情绪管理,压力调节" /></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="可预约时段" prop="availableTimesText"><el-input v-model="form.availableTimesText" placeholder="用逗号分隔，例如 10:00,14:00,16:00" /><div class="field-help">用户端会按这些时段展示未来两个月的预约入口。</div></el-form-item></el-col>
             <el-col :span="24"><el-form-item label="头像"><div class="expert-image-editor"><el-input v-model="form.photo" placeholder="builtin:avatar 或上传后自动填入" /><el-upload :action="uploadUrl" :headers="uploadHeaders" :show-file-list="false" :before-upload="beforeExpertUpload" :on-success="expertUploadSuccess" :on-error="expertUploadError" accept="image/jpeg,image/png"><el-button icon="Upload">上传头像</el-button></el-upload><el-image v-if="form.photo && form.photo.startsWith('/profile/')" class="expert-image-preview" :src="imageUrl(form.photo)" fit="cover" /></div></el-form-item></el-col>
@@ -116,7 +116,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogOpen = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submit">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="submit">{{ contentType === 'expert' ? '保存专家' : '保存' }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -125,6 +125,7 @@
 <script setup>
 import { addContent, deleteContent, getContent, listContent, updateContent } from '@/api/mindcare'
 import { getToken } from '@/utils/auth'
+import { buildAssessmentPayload } from './assessmentPayload'
 
 const props = defineProps({
   contentType: { type: String, required: true },
@@ -143,6 +144,7 @@ const query = reactive({ pageNum: 1, pageSize: 10, contentType: props.contentTyp
 const uploadUrl = `${import.meta.env.VITE_APP_BASE_API}/common/upload`
 const uploadHeaders = computed(() => ({ Authorization: `Bearer ${getToken()}` }))
 const form = reactive(emptyForm())
+const originalPayload = ref(emptyPayload())
 const rules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   contentKey: [
@@ -170,10 +172,11 @@ function emptyForm() {
   return { contentId: undefined, contentKey: '', contentType: props.contentType, title: '', category: '', summary: '', payloadJson: JSON.stringify(emptyPayload(), null, 2), status: '0', sortOrder: 0, minutes: 10, learners: '0', teacher: '', intro: '', video: '', chapters: [{ title: '第一章', duration: '05:00' }], questions: ['请填写题目'], options: ['从不', '偶尔', '经常', '几乎每天'], optionValues: [0, 1, 2, 3], sourceName: '', sourceUrl: '', license: '', version: '', scoringType: 'percent', scoreMax: 100, crisisDirection: 'none', crisisThreshold: 0, crisisAnswerIndex: -1, crisisAnswerMin: 1, crisisReason: '', name: '', credentials: '', profile: '', methodsText: '', availableTimesText: '10:00,14:00,16:00', photo: 'builtin:avatar', activityDate: '', activityTime: '', activityLocation: '', activityCapacity: 20, activityEnrolled: 0, activityStatus: '报名中', activityIntro: '', activitySchedule: [['09:00', '活动开始', '']] }
 }
 
-function assignForm(value) {
+function assignForm(value = {}) {
   Object.assign(form, emptyForm(), value)
   let payload = {}
   try { payload = value?.payloadJson ? JSON.parse(value.payloadJson) : emptyPayload() } catch (_) { payload = emptyPayload() }
+  originalPayload.value = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : emptyPayload()
   form.payloadJson = JSON.stringify(payload, null, 2)
   if (props.contentType === 'assessment') {
     form.minutes = Number(payload.minutes || 3); form.questions = Array.isArray(payload.questions) ? payload.questions.map((item) => typeof item === 'string' ? item : item.text || item.question || '') : ['请填写题目']
@@ -233,11 +236,7 @@ function expertUploadError() { proxy.$modal.msgError('头像上传失败，请�
 function imageUrl(path) { return `${import.meta.env.VITE_APP_BASE_API}${path}` }
 
 function buildPayload() {
-  if (props.contentType === 'assessment') {
-    const crisisRules = { direction: form.crisisDirection, threshold: form.crisisThreshold, level: form.crisisDirection === 'none' ? 'normal' : 'high', reason: form.crisisReason }
-    if (form.crisisDirection !== 'none' && Number(form.crisisAnswerIndex) >= 0) { crisisRules.answerIndex = Number(form.crisisAnswerIndex); crisisRules.answerMin = Number(form.crisisAnswerMin) }
-    return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, description: form.summary, count: form.questions.length, minutes: form.minutes, questions: form.questions, options: form.options, optionValues: form.optionValues, sourceName: form.sourceName, sourceUrl: form.sourceUrl, license: form.license, version: form.version, scoring: { type: form.scoringType, maxScore: form.scoreMax, displayMax: form.scoreMax, label: form.scoringType === 'sum' ? '原始总分' : '状态指数' }, crisisRules }
-  }
+  if (props.contentType === 'assessment') return buildAssessmentPayload(originalPayload.value, form)
   if (props.contentType === 'course') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, minutes: form.minutes, learners: form.learners, teacher: form.teacher, intro: form.intro || form.summary, video: form.video, chapters: form.chapters }
   if (props.contentType === 'expert') return { ...emptyPayload(), id: form.contentKey, title: form.title || form.name, category: form.category, name: form.name || form.title, credentials: form.credentials, profile: form.profile || form.summary, methods: form.methodsText.split(/[,，]/).map((item) => item.trim()).filter(Boolean), availableTimes: form.availableTimesText.split(/[,，]/).map((item) => item.trim()).filter(Boolean), photo: form.photo, available: true }
   if (props.contentType === 'activity') return { ...emptyPayload(), id: form.contentKey, title: form.title, category: form.category, date: form.activityDate, time: form.activityTime, location: form.activityLocation, capacity: form.activityCapacity, enrolled: form.activityEnrolled, status: form.activityStatus, intro: form.activityIntro || form.summary, schedule: form.activitySchedule }
@@ -247,7 +246,8 @@ function buildPayload() {
 async function submit() {
   if (props.contentType === 'expert') {
     if (!form.contentKey) form.contentKey = nextExpertKey()
-    if (!form.title && form.name) form.title = form.name
+    form.title = String(form.name || '').trim()
+    if (!form.summary && form.profile) form.summary = String(form.profile).trim().slice(0, 500)
   }
   await proxy.$refs.formRef.validate()
   const payload = buildPayload()
@@ -302,4 +302,25 @@ load()
 .expert-image-editor > .el-input { flex: 1; min-width: 260px; }
 .expert-image-preview { width: 72px; height: 72px; border-radius: 50%; }
 .field-help { margin-top: 5px; color: #89958f; font-size: 12px; line-height: 1.5; }
+</style>
+
+<style lang="scss">
+.content-edit-dialog {
+  max-width: calc(100vw - 24px);
+
+  .el-dialog__body {
+    max-height: min(72vh, 720px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .content-edit-dialog {
+    margin-top: 3vh;
+
+    .el-dialog__body { max-height: calc(100dvh - 170px); padding: 12px; }
+    .el-dialog__footer { padding: 12px; }
+    .el-form-item { margin-bottom: 18px; }
+  }
+}
 </style>
